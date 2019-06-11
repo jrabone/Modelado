@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<script src="./jquery-3.4.1.min.js"></script>
+	<script src="./chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@0.7.0"></script>
+    <link rel="stylesheet" href="./bootstrap.min.css">
+    <title>My chart</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+			<div class="col-2">
+				<div class="row">
+					<span>Desde: <span>
+					<input id="desde" type="text" value="0">
+				</div>
+				<div class="row">
+					<span>Hasta: <span>
+					<input id="hasta" type="text" value="4">
+				</div>
+				<div class="row">
+					<span>Función: <span>
+					<input id="funcion" type="text" value="x*x">
+				</div>
+				<div class="row">
+					<span>Cantidad de puntos: <span>
+					<input id="puntos" type="text" value="100">
+				</div>
+				<div class="row">
+					<input id="cargarGrafico" type="submit" value="Cargar Grafico">
+				</div>
+				<div class="row">
+					<span id="resultado"></span>
+				</div>				
+			</div>
+			<div class="col-10">
+				<canvas id="myChart">
+				</canvas>
+			</div>
+		</div>
+    </div>
+	
+    <script>
+	
+	let lineChart;
+	function calcularMaximo() {
+		var x = parseInt($("#desde").val());
+		var maximo = -99999;
+		var desde = parseInt($("#desde").val());
+		var hasta = parseInt($("#hasta").val());
+		
+		var distancia = parseFloat(hasta - desde) / parseFloat(100);
+		
+		for (i = 0; i <= 100; i++) {
+				if (parseFloat((eval($("#funcion").val()).toFixed(2))) >= maximo)
+					maximo = eval($("#funcion").val()).toFixed(2);
+				x = x + distancia;
+		}
+		
+		if (maximo < 0)
+			return 0;
+		return maximo;
+	}
+	
+	function calcularMinimo() {
+		var x = parseInt($("#desde").val());
+		var minimo = 99999;
+		var desde = parseInt($("#desde").val());
+		var hasta = parseInt($("#hasta").val());
+		
+		var distancia = parseFloat(hasta - desde) / parseFloat(100);
+		
+		for (i = 0; i <= 100; i++) {
+				if (parseFloat((eval($("#funcion").val())).toFixed(2)) < minimo)
+					minimo = eval($("#funcion").val()).toFixed(2);
+				x = x + distancia;
+		}
+		
+		if (minimo > 0)
+			return 0;
+			
+		return minimo;
+	}
+	
+		$("#cargarGrafico").click(function() {
+			dibujar();
+		});
+		
+		$(document).ready(function() {
+			dibujar();
+		});
+		
+		function dibujar(){
+			if (lineChart != undefined)  
+				lineChart.destroy();
+			
+			//Inicio y fin de la integral
+			var desde = parseInt($("#desde").val());
+			var hasta = parseInt($("#hasta").val());
+			
+			//Distancia usada entre puntos para graficar
+			var distancia = parseFloat(hasta - desde) / parseFloat(100);
+			
+			//Puntos a disparar
+			var puntos = parseInt($("#puntos").val());
+			
+			
+			//Arrays usados para 
+			var valoresY1 = [];
+			var valoresY2 = [];
+			var funcionValores = [];
+			
+			var valoresQueSuman = [];
+			var valoresQueRestan = [];
+
+			//Maximo y minimo de la funcion en el rango especificado
+			var maximo = calcularMaximo();
+			var minimo = calcularMinimo();
+			
+			var valoresLineas1 = [{x:desde, y:(maximo)}, {x:desde , y:minimo}];
+			var valoresLineas2 = [{x:hasta, y:(maximo)}, {x:hasta , y:minimo}];
+			var valoresLineas3 = [{x:desde, y:minimo}, {x:hasta , y:minimo}];
+			var valoresLineas4 = [{x:desde, y:(maximo)}, {x:hasta , y:(maximo)}];
+			
+			//variable auxiliar
+			var valorInicial = desde;
+			
+			//variable usada en la funcion ingresada por el usuario
+			var x;
+			
+			//Cargo puntos para graficar la funcion
+			for (i = 0; i <= 100; i++) {
+				x = parseFloat(valorInicial);
+				funcionValores.push({x:valorInicial, y:(eval($("#funcion").val()))});
+				valorInicial = valorInicial + distancia;
+			}
+			
+			//Disparo n puntos al azar dentro del rectangulo
+			for (i = 0; i <= puntos; i++) {
+				var xRandom = Math.random() * (+hasta - +desde) + +desde; 
+				var yRandom = Math.random() * (+(maximo) - +minimo) + +minimo; 
+				
+				x = xRandom;
+				
+				//Si el punto es positivo y se encuentra debajo de la funcion
+				if((yRandom <= (eval($("#funcion").val()))) && (yRandom >= 0)){
+					valoresY1.push({ x: xRandom, y: yRandom });
+					valoresQueSuman.push({ x: xRandom, y: yRandom });
+				} 
+				
+				//Si el punto es negativo y se encuentra debajo de la funcion no se toma en cuenta para calcular el resultado final
+				if((yRandom <= (eval($("#funcion").val()))) && (yRandom < 0)){
+					valoresY2.push({ x: xRandom, y: yRandom });
+				}
+				
+				//Si el punto es negativo y se encuentra por encima de la funcion
+				if((yRandom >= (eval($("#funcion").val()))) && (yRandom <= 0)){
+					valoresY1.push({ x: xRandom, y: yRandom });
+					valoresQueRestan.push({ x: xRandom, y: yRandom });
+				}
+				
+				//Si el punto es positivo y se encuentra por encima de la funcion no se toma en cuenta para calcular el resultado final
+				if((yRandom >= (eval($("#funcion").val()))) && (yRandom > 0)){
+					valoresY2.push({ x: xRandom, y: yRandom });
+				}
+			}
+			
+			//Calculo resultado de la integral
+			var resultado = (((valoresQueSuman.length - valoresQueRestan.length) / $("#puntos").val()) * ((hasta - desde) * (maximo - minimo))).toFixed(2);
+			
+			$("#resultado").text('Resultado de integral: ' + resultado.toString());
+
+			//Dibujo el grafico
+			let myChart = document.getElementById("myChart").getContext("2d");
+
+			lineChart = new Chart(myChart, {
+				type: 'line',
+				data: {
+					datasets: [
+						{
+							backgroundColor: 'rgb(0, 100, 0)',
+							pointRadius: 5,
+							//pointStyle: "crossRot",
+							label: 'Verdes',
+							borderColor: 'rgb(0, 100, 0)',
+							data: valoresY1,
+							fill: true,
+							showLine: false
+						},
+						{
+							backgroundColor: 'rgb(255, 0, 0)',
+							pointRadius: 5,
+							//pointStyle: "crossRot",
+							label: 'Rojos',
+							borderColor: 'rgb(255, 0, 0)',
+							data: valoresY2,
+							fill: true,
+							showLine: false
+						},
+						{
+							label: 'Borde1',
+							borderColor: 'rgb(0, 0, 0)',
+							data: valoresLineas1,
+							fill: false
+						},
+						{
+							label: 'Borde2',
+							borderColor: 'rgb(0, 0, 0)',
+							data: valoresLineas2,
+							fill: false
+						},
+						{
+							label: 'Borde3',
+							borderColor: 'rgb(0, 0, 0)',
+							data: valoresLineas3,
+							fill: false
+						},
+						{
+							label: 'Borde4',
+							borderColor: 'rgb(0, 0, 0)',
+							data: valoresLineas4,
+							fill: false
+						},
+						{
+							label: 'Funcion',
+							borderColor: 'rgb(0, 0, 0)',
+							data: funcionValores,
+							pointRadius: 0,
+							fill: false
+						}
+						]
+				},
+				options: {
+					tooltips: {enabled: false},
+					hover: {mode: null},
+					scales: {
+						xAxes: [{
+							type: 'linear',
+							position: 'bottom'
+						}]
+					},
+					animation: {
+						duration: 0
+					}
+				}
+			});
+		}
+    </script>
+</body>
+
+</html>
